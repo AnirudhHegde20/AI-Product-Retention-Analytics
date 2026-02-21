@@ -1,0 +1,24 @@
+name: 'ai_saas_dbt'
+version: '1.0.0'
+config-version: 2
+
+profile: 'ai_saas_dbt'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  ai_saas_dbt:
+    +materialized: view
+    staging:
+      +schema: staging
+    marts:
+      +schema: marts
