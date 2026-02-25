@@ -22,3 +22,4 @@ models:
       +schema: staging
     marts:
       +schema: marts
+      +materialized: table
