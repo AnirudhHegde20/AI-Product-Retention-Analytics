@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: stg_product_hunt_launches
+    description: "Cleaned and standardized Product Hunt launches from raw layer"
+    
+    columns:
+      - name: id
+        description: "Unique row identifier"
+        tests:
+          - not_null
+          - unique
+
+      - name: name
+        description: "Tool name (lowercased and trimmed)"
+        tests:
+          - not_null
+
+      - name: product_url
+        description: "Unique URL for the product — natural key"
+        tests:
+          - not_null
+          - unique
+
+      - name: upvotes
+        description: "Number of upvotes on Product Hunt"
+        tests:
+          - not_null
+
+      - name: traction_tier
+        description: "Derived traction tier based on upvotes"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['High Traction', 'Medium Traction', 'Low Traction']
+
+      - name: category
+        description: "Product category from Product Hunt"
+        tests:
+          - not_null
