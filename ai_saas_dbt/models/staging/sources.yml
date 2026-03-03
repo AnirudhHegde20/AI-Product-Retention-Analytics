@@ -5,3 +5,5 @@ sources:
     schema: raw
     tables:
       - name: product_hunt_launches
+      - name: yelp_reviews
+      - name: yelp_users
