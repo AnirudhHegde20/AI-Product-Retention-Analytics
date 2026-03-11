@@ -94,7 +94,6 @@ models:
 ---
 
 ## 4. Interview Talking Points
-*(Add to this as you build)*
 
 - "I designed the warehouse with three layers — raw, staging, marts — to ensure raw data immutability and clean separation of concerns."
 - "I used dbt views for staging models to save storage and ensure freshness, and tables for marts models because they're queried heavily."
@@ -454,4 +453,3 @@ This is how we calculate cohort size. At month 0, every user in the cohort is co
 - "I used batch processing with a chunk size of 10,000 rows to safely load 500k records into PostgreSQL without overwhelming local memory."
 
 ---
-*More sections to be added as we progress through the project.*
