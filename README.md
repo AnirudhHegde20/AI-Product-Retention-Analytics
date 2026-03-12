@@ -155,7 +155,7 @@ streamlit run dashboard/app.py
 
 ## 📈 dbt Lineage Graph
 
-lineage_graph.png
+<img width="1495" height="768" alt="lineage_graph" src="https://github.com/user-attachments/assets/6a92d681-1109-46b6-8276-82344dcbfb15" />
 
 ---
 
