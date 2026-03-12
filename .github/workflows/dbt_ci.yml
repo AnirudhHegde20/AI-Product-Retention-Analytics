@@ -1,0 +1,115 @@
+name: dbt CI
+
+# ── When does this run? ───────────────────────────────────────────────────────
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# ── What does it do? ──────────────────────────────────────────────────────────
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB:       ai_saas_analytics
+          POSTGRES_USER:     dbt_user
+          POSTGRES_PASSWORD: dbt_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # 1. Check out your code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. Install dbt
+      - name: Install dbt
+        run: |
+          pip install dbt-postgres
+
+      # 4. Create dbt profile pointing to CI database
+      - name: Create dbt profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          ai_saas_dbt:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: localhost
+                port: 5432
+                user: dbt_user
+                password: dbt_password
+                dbname: ai_saas_analytics
+                schema: analytics
+                threads: 4
+          EOF
+
+      # 5. Set up schemas in CI database
+      - name: Create schemas
+        run: |
+          PGPASSWORD=dbt_password psql -h localhost -U dbt_user -d ai_saas_analytics -c "
+            CREATE SCHEMA IF NOT EXISTS raw;
+            CREATE SCHEMA IF NOT EXISTS staging;
+            CREATE SCHEMA IF NOT EXISTS marts;
+          "
+
+      # 6. Create raw tables (empty — just structure)
+      - name: Create raw tables
+        run: |
+          PGPASSWORD=dbt_password psql -h localhost -U dbt_user -d ai_saas_analytics -c "
+            CREATE TABLE IF NOT EXISTS raw.product_hunt_launches (
+              id           SERIAL PRIMARY KEY,
+              name         TEXT NOT NULL,
+              tagline      TEXT,
+              upvotes      INTEGER,
+              category     TEXT,
+              pricing_type TEXT,
+              launch_date  DATE,
+              product_url  TEXT UNIQUE NOT NULL,
+              scraped_at   TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS raw.yelp_reviews (
+              review_id   TEXT PRIMARY KEY,
+              user_id     TEXT NOT NULL,
+              business_id TEXT NOT NULL,
+              stars       NUMERIC(2,1),
+              review_date DATE NOT NULL,
+              useful      INTEGER DEFAULT 0,
+              funny       INTEGER DEFAULT 0,
+              cool        INTEGER DEFAULT 0,
+              loaded_at   TIMESTAMP DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS raw.yelp_users (
+              user_id       TEXT PRIMARY KEY,
+              name          TEXT,
+              review_count  INTEGER,
+              yelping_since DATE,
+              fans          INTEGER,
+              average_stars NUMERIC(3,2),
+              loaded_at     TIMESTAMP DEFAULT NOW()
+            );
+          "
+
+      # 7. Run dbt build (compile + test all models)
+      - name: Run dbt build
+        working-directory: ai_saas_dbt
+        run: |
+          dbt build --profiles-dir ~/.dbt
