@@ -94,6 +94,7 @@ models:
 ---
 
 ## 4. Interview Talking Points
+*(Add to this as you build)*
 
 - "I designed the warehouse with three layers — raw, staging, marts — to ensure raw data immutability and clean separation of concerns."
 - "I used dbt views for staging models to save storage and ensure freshness, and tables for marts models because they're queried heavily."
@@ -453,3 +454,42 @@ This is how we calculate cohort size. At month 0, every user in the cohort is co
 - "I used batch processing with a chunk size of 10,000 rows to safely load 500k records into PostgreSQL without overwhelming local memory."
 
 ---
+
+## 12. CI/CD with GitHub Actions
+
+### What is CI/CD?
+- **CI (Continuous Integration):** Every code push automatically triggers a build + test run
+- **CD (Continuous Deployment):** Automatically deploy if tests pass
+- In our project we implement CI — every push to `main` runs `dbt build`
+
+### Why CI/CD Matters
+Without CI/CD, broken code can silently merge into main. With CI/CD, if any dbt test fails → the pipeline fails loudly → bad data never reaches production.
+
+### How GitHub Actions Works
+- Special file at `.github/workflows/dbt_ci.yml` tells GitHub what to do on every push
+- GitHub spins up a **fresh, empty environment** every time — nothing from your local machine carries over
+- This is why we need to recreate schemas and raw tables in the workflow
+
+### Our CI/CD Pipeline — 7 Steps
+1. Checkout code from GitHub
+2. Set up Python 3.9
+3. Install dbt-postgres
+4. Create `profiles.yml` pointing to CI database
+5. Create schemas (raw, staging, marts) — fresh environment needs this
+6. Create raw tables — dbt needs these to exist before running
+7. Run `dbt build` — compiles all models + runs all 31 tests
+
+### dbt vs Airflow
+| Tool | Role | When to use |
+|------|------|-------------|
+| dbt | Transforms data **inside** the warehouse | SQL modeling, tests, docs |
+| Airflow | **Orchestrates** entire pipeline end to end | Scheduling, triggering scripts, dependencies |
+| GitHub Actions | **CI/CD** — quality gate on every push | Automated testing, lightweight scheduling |
+
+### Interview Talking Points
+- "I set up CI/CD with GitHub Actions so every push to main automatically runs dbt build — if any of the 31 data quality tests fail, the pipeline fails loudly instead of silently."
+- "The CI environment spins up a fresh PostgreSQL instance each time, which means I had to recreate schemas and raw tables as part of the workflow — same infrastructure-first principle as local development."
+- "I understand the difference between dbt (transformation), Airflow (orchestration), and GitHub Actions (CI/CD) — they solve different problems in the data stack."
+
+---
+*More sections to be added as we progress through the project.*
