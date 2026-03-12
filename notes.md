@@ -94,7 +94,6 @@ models:
 ---
 
 ## 4. Interview Talking Points
-*(Add to this as you build)*
 
 - "I designed the warehouse with three layers — raw, staging, marts — to ensure raw data immutability and clean separation of concerns."
 - "I used dbt views for staging models to save storage and ensure freshness, and tables for marts models because they're queried heavily."
