@@ -16,80 +16,105 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# ── 3. Define GraphQL query ───────────────────────────────────────────────────
-# Product Hunt uses GraphQL — we ask for exactly the fields we want
-QUERY = """
-{
-  posts(first: 50, order: VOTES) {
-    edges {
-      node {
-        name
-        tagline
-        votesCount
-        topics {
-          edges {
-            node {
-              name
-            }
-          }
-        }
-        thumbnail {
-          type
-        }
-        createdAt
-        website
-      }
-    }
-  }
-}
-"""
+# ── 3. GraphQL query with pagination support ──────────────────────────────────
+def build_query(after_cursor=None):
+    after = f', after: "{after_cursor}"' if after_cursor else ""
+    return f"""
+    {{
+      posts(first: 50, order: VOTES{after}) {{
+        pageInfo {{
+          hasNextPage
+          endCursor
+        }}
+        edges {{
+          node {{
+            name
+            tagline
+            votesCount
+            topics {{
+              edges {{
+                node {{
+                  name
+                }}
+              }}
+            }}
+            thumbnail {{
+              type
+            }}
+            createdAt
+            website
+          }}
+        }}
+      }}
+    }}
+    """
 
-# ── 4. Call the API ───────────────────────────────────────────────────────────
-headers = {"Authorization": f"Bearer {TOKEN}"}
-response = requests.post(
-    "https://api.producthunt.com/v2/api/graphql",
-    json={"query": QUERY},
-    headers=headers
-)
-data = response.json()
+# ── 4. Fetch all pages ────────────────────────────────────────────────────────
+headers   = {"Authorization": f"Bearer {TOKEN}"}
+cursor    = None
+inserted  = 0
+skipped   = 0
+page      = 1
+MAX_PAGES = 10  # fetch up to 500 launches (10 pages x 50 each)
 
-# ── 5. Parse and insert rows ──────────────────────────────────────────────────
-posts = data["data"]["posts"]["edges"]
-inserted = 0
-skipped  = 0
+while page <= MAX_PAGES:
+    print(f"Fetching page {page}...")
 
-for edge in posts:
-    node = edge["node"]
+    response = requests.post(
+        "https://api.producthunt.com/v2/api/graphql",
+        json={"query": build_query(cursor)},
+        headers=headers
+    )
+    data = response.json()
 
-    name         = node.get("name")
-    tagline      = node.get("tagline")
-    upvotes      = node.get("votesCount")
-    launch_date  = node.get("createdAt", "")[:10]   # keep only YYYY-MM-DD
-    product_url  = node.get("website") or f"https://www.producthunt.com/posts/{name}"
+    # Check for API errors
+    if "errors" in data:
+        print(f"API error: {data['errors']}")
+        break
 
-    # Extract first topic as category
-    topics       = node.get("topics", {}).get("edges", [])
-    category     = topics[0]["node"]["name"] if topics else None
+    posts    = data["data"]["posts"]["edges"]
+    pageInfo = data["data"]["posts"]["pageInfo"]
 
-    # Pricing type from thumbnail type (rough proxy)
-    thumb_type   = node.get("thumbnail", {}).get("type", "")
-    pricing_type = "Free" if "free" in thumb_type.lower() else "Unknown"
+    # ── 5. Parse and insert rows ──────────────────────────────────────────────
+    for edge in posts:
+        node = edge["node"]
 
-    try:
-        cur.execute("""
-            INSERT INTO raw.product_hunt_launches
-                (name, tagline, upvotes, category, pricing_type, launch_date, product_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (product_url) DO NOTHING
-        """, (name, tagline, upvotes, category, pricing_type, launch_date, product_url))
-        inserted += 1
-    except Exception as e:
-        print(f"  ⚠️  Skipped '{name}': {e}")
-        skipped += 1
+        name        = node.get("name")
+        tagline     = node.get("tagline")
+        upvotes     = node.get("votesCount")
+        launch_date = node.get("createdAt", "")[:10]
+        product_url = node.get("website") or f"https://www.producthunt.com/posts/{name}"
 
-# ── 6. Commit and report ──────────────────────────────────────────────────────
-conn.commit()
+        topics      = node.get("topics", {}).get("edges", [])
+        category    = topics[0]["node"]["name"] if topics else None
+
+        thumb_type   = node.get("thumbnail", {}).get("type", "")
+        pricing_type = "Free" if "free" in thumb_type.lower() else "Unknown"
+
+        try:
+            cur.execute("""
+                INSERT INTO raw.product_hunt_launches
+                    (name, tagline, upvotes, category, pricing_type, launch_date, product_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (product_url) DO NOTHING
+            """, (name, tagline, upvotes, category, pricing_type, launch_date, product_url))
+            inserted += 1
+        except Exception as e:
+            print(f"  Skipped '{name}': {e}")
+            skipped += 1
+
+    conn.commit()
+    print(f"  Page {page} done — {inserted} total inserted so far")
+
+    # ── 6. Check if more pages exist ──────────────────────────────────────────
+    if pageInfo["hasNextPage"]:
+        cursor = pageInfo["endCursor"]
+        page  += 1
+    else:
+        print("No more pages available.")
+        break
+
+# ── 7. Cleanup ────────────────────────────────────────────────────────────────
 cur.close()
 conn.close()
-
-print(f"✅ Done — {inserted} rows inserted, {skipped} skipped.")
+print(f"\n✅ Done — {inserted} rows inserted, {skipped} skipped.")
