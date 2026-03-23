@@ -1,6 +1,7 @@
 # Project Learning Notes
 ## AI SaaS Retention & Competitive Intelligence Analytics Platform
 
+![dbt CI](https://github.com/AnirudhHegde20/AI-Product-Retention-Analytics/actions/workflows/dbt_ci.yml/badge.svg)
 ---
 
 ## 1. Architecture — Warehouse Layering
