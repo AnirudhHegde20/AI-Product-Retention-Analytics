@@ -1,5 +1,8 @@
 # AI SaaS Retention & Competitive Intelligence Analytics Platform
 
+![dbt CI](https://github.com/AnirudhHegde20/AI-Product-Retention-Analytics/actions/workflows/dbt_ci.yml/badge.svg)
+
+
 An end-to-end analytics engineering project that simulates what a real B2C SaaS data team would build — from raw data ingestion to product insights.
 
 ---
