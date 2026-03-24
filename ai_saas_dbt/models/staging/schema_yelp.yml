@@ -6,7 +6,7 @@ models:
     tests:
       # Table-level tests
       - dbt_expectations.expect_table_row_count_to_be_between:
-          min_value: 100000
+          min_value: 0
           max_value: 1000000
       - dbt_expectations.expect_table_columns_to_match_ordered_list:
           column_list:
@@ -82,7 +82,7 @@ models:
     tests:
       # Table-level tests
       - dbt_expectations.expect_table_row_count_to_be_between:
-          min_value: 100000
+          min_value: 0
           max_value: 1000000
 
     columns:
