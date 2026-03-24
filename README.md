@@ -27,28 +27,7 @@ B2C AI apps struggle with retention. This platform answers three questions:
 
 ## 🏗️ Architecture
 
-```
-[Product Hunt API]          [Yelp Dataset (500k+ events)]
-        ↓                              ↓
-   raw schema                     raw schema
-   (PostgreSQL)                   (PostgreSQL)
-        ↓                              ↓
-   staging (dbt)               staging (dbt)
-   - stg_product_hunt_launches  - stg_yelp_reviews
-                                - stg_yelp_users
-                    ↘            ↙
-                  marts (dbt)
-                  - fct_launch_performance
-                  - fct_category_performance
-                  - fct_retention_cohorts
-                  - fct_survival_inputs
-                         ↓
-            ┌────────────┴────────────┐
-     Analysis (Python)        Streamlit Dashboard
-     - Kaplan-Meier            - Retention cohorts
-     - XGBoost churn           - Survival curves
-       prediction              - Competitive intel
-```
+![Architecture diagran](architecture_diagram.png)
 
 ---
 

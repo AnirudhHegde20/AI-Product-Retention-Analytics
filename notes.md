@@ -1,7 +1,6 @@
 # Project Learning Notes
 ## AI SaaS Retention & Competitive Intelligence Analytics Platform
 
-![dbt CI](https://github.com/AnirudhHegde20/AI-Product-Retention-Analytics/actions/workflows/dbt_ci.yml/badge.svg)
 ---
 
 ## 1. Architecture — Warehouse Layering
@@ -95,6 +94,7 @@ models:
 ---
 
 ## 4. Interview Talking Points
+*(Add to this as you build)*
 
 - "I designed the warehouse with three layers — raw, staging, marts — to ensure raw data immutability and clean separation of concerns."
 - "I used dbt views for staging models to save storage and ensure freshness, and tables for marts models because they're queried heavily."
@@ -490,6 +490,93 @@ Without CI/CD, broken code can silently merge into main. With CI/CD, if any dbt 
 - "I set up CI/CD with GitHub Actions so every push to main automatically runs dbt build — if any of the 31 data quality tests fail, the pipeline fails loudly instead of silently."
 - "The CI environment spins up a fresh PostgreSQL instance each time, which means I had to recreate schemas and raw tables as part of the workflow — same infrastructure-first principle as local development."
 - "I understand the difference between dbt (transformation), Airflow (orchestration), and GitHub Actions (CI/CD) — they solve different problems in the data stack."
+
+---
+
+## 13. dbt-expectations — Advanced Observability
+
+### What is dbt-expectations?
+A dbt package that adds advanced data quality tests beyond the built-in `not_null`, `unique`, and `accepted_values`. It's a senior-level signal — most junior engineers never use it.
+
+### Installing dbt-expectations
+```yaml
+# packages.yml
+packages:
+  - package: metaplane/dbt_expectations
+    version: [">=0.10.0", "<1.0.0"]
+```
+```bash
+dbt deps  # installs dbt packages (like pip install for dbt)
+```
+
+### Advanced Tests Added
+
+| Test | What it catches |
+|------|----------------|
+| `expect_table_row_count_to_be_between` | Table suddenly has too few rows — ingestion failure |
+| `expect_column_values_to_be_between` | Values outside valid range (stars > 5, negative upvotes) |
+| `expect_table_columns_to_match_ordered_list` | Schema drift — columns added/removed/renamed |
+
+### Key Insight — CI vs Local Testing
+Row count tests must use `min_value: 0` in CI because the CI environment has empty tables. Data volume testing happens locally where data actually exists. CI tests schema and logic, not data volume.
+
+### Interview Talking Points
+- "I used dbt-expectations for advanced observability — row count anomaly detection, value range validation, and schema drift detection. These catch silent failures that basic not_null tests miss."
+- "Schema drift detection means if someone changes the raw table structure, our tests catch it immediately before it breaks downstream models."
+
+---
+
+## 14. Product Hunt API Pagination
+
+### What is Cursor-Based Pagination?
+When an API has more results than fit in one response, it returns a cursor — a pointer to the last item on the current page. You pass this cursor back to get the next page.
+
+```
+Page 1: fetch first 50 → get endCursor "ABC123"
+Page 2: fetch first 50 AFTER "ABC123" → get endCursor "DEF456"
+Page 3: fetch first 50 AFTER "DEF456" → and so on...
+```
+
+### How We Implemented It
+```python
+while page <= MAX_PAGES:
+    response = fetch_page(cursor)
+    insert_rows(response)
+    if response["hasNextPage"]:
+        cursor = response["endCursor"]
+        page += 1
+    else:
+        break  # no more data
+```
+
+Two stopping conditions:
+1. `hasNextPage = False` — API has no more data
+2. `page > MAX_PAGES` — safety limit so we don't loop forever
+
+Result: expanded from 20 rows to 200 rows of Product Hunt data.
+
+---
+
+## 15. CI/CD Pipeline — Final State
+
+### What the Pipeline Does
+Every push to `main` on GitHub automatically:
+1. Spins up fresh Ubuntu + PostgreSQL environment
+2. Installs Python + dbt-postgres
+3. Creates schemas and raw tables (empty)
+4. Runs `dbt deps` to install packages
+5. Runs `dbt build` — compiles all models + runs 42 tests
+6. If any test fails → pipeline fails loudly
+
+### Key Learnings
+- CI environment is always fresh and empty — row count tests must use `min_value: 0`
+- `dbt deps` must run before `dbt build` in CI — packages aren't pre-installed
+- Node.js version matters — use `actions/checkout@v4` and `actions/setup-python@v5`
+- CI tests schema correctness and logic, not data volume
+
+### Final Test Count
+- 42 automated tests passing in CI
+- Covers: not_null, unique, accepted_values, row counts, value ranges, schema drift
 
 ---
 *More sections to be added as we progress through the project.*
