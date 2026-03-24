@@ -3,6 +3,26 @@ version: 2
 models:
   - name: stg_yelp_reviews
     description: "Cleaned and standardized Yelp reviews — each row is one user engagement event"
+    tests:
+      # Table-level tests
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 100000
+          max_value: 1000000
+      - dbt_expectations.expect_table_columns_to_match_ordered_list:
+          column_list:
+            - review_id
+            - user_id
+            - business_id
+            - stars
+            - useful
+            - funny
+            - cool
+            - engagement_score
+            - review_date
+            - review_month
+            - review_year
+            - sentiment
+            - loaded_at
 
     columns:
       - name: review_id
@@ -25,27 +45,45 @@ models:
         description: "Star rating 1.0 to 5.0"
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 5
 
       - name: review_date
         description: "Date review was written — used for time-based analysis"
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'2000-01-01'::date"
+              max_value: "'2030-01-01'::date"
 
       - name: review_month
         description: "Truncated to month — used for cohort grouping"
         tests:
           - not_null
 
+      - name: engagement_score
+        description: "Combined engagement signal"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1000
+
       - name: sentiment
         description: "Derived sentiment from star rating"
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['Positive', 'Neutral', 'Negative']
+              values: ['Positive', 'Neutral', 'Negative']
 
   - name: stg_yelp_users
     description: "Cleaned Yelp users — each row is one unique user with their cohort month"
+    tests:
+      # Table-level tests
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 100000
+          max_value: 1000000
 
     columns:
       - name: user_id
@@ -59,18 +97,31 @@ models:
         tests:
           - not_null
 
+      - name: review_count
+        description: "Total number of reviews written"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100000
+
+      - name: average_stars
+        description: "User's average star rating"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 5
+
       - name: user_segment
         description: "Derived user segment based on review count"
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['Power User', 'Regular User', 'Casual User', 'New User']
+              values: ['Power User', 'Regular User', 'Casual User', 'New User']
 
       - name: influence_tier
         description: "Derived influence tier based on fan count"
         tests:
           - not_null
           - accepted_values:
-              arguments:
-                values: ['Influencer', 'Active', 'Standard']
+              values: ['Influencer', 'Active', 'Standard']
