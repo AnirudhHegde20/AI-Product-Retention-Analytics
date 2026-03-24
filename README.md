@@ -2,7 +2,6 @@
 
 ![dbt CI](https://github.com/AnirudhHegde20/AI-Product-Retention-Analytics/actions/workflows/dbt_ci.yml/badge.svg)
 
-
 An end-to-end analytics engineering project that simulates what a real B2C SaaS data team would build — from raw data ingestion to product insights.
 
 ---
@@ -27,8 +26,29 @@ B2C AI apps struggle with retention. This platform answers three questions:
 ---
 
 ## 🏗️ Architecture
-![Architecture Diagram](architecture_diagram.png)
 
+```
+[Product Hunt API]          [Yelp Dataset (500k+ events)]
+        ↓                              ↓
+   raw schema                     raw schema
+   (PostgreSQL)                   (PostgreSQL)
+        ↓                              ↓
+   staging (dbt)               staging (dbt)
+   - stg_product_hunt_launches  - stg_yelp_reviews
+                                - stg_yelp_users
+                    ↘            ↙
+                  marts (dbt)
+                  - fct_launch_performance
+                  - fct_category_performance
+                  - fct_retention_cohorts
+                  - fct_survival_inputs
+                         ↓
+            ┌────────────┴────────────┐
+     Analysis (Python)        Streamlit Dashboard
+     - Kaplan-Meier            - Retention cohorts
+     - XGBoost churn           - Survival curves
+       prediction              - Competitive intel
+```
 
 ---
 
@@ -36,14 +56,14 @@ B2C AI apps struggle with retention. This platform answers three questions:
 
 | Layer | Tool | Purpose |
 |-------|------|---------|
-| Warehouse | PostgreSQL | Local data warehouse |
+| Warehouse | PostgreSQL (Snowflake migration planned) | Local data warehouse |
 | Transformation | dbt Core | Modeling, testing, lineage |
 | Ingestion | Python (requests, psycopg2) | API + file ingestion |
 | Survival Analysis | lifelines | Kaplan-Meier curves |
 | ML Model | XGBoost + scikit-learn | Churn prediction (0.71 AUC-ROC) |
 | Dashboard | Streamlit + Plotly | Interactive visualizations |
-| CI/CD | GitHub Actions | Automated dbt build + tests |
-| Version Control | Git + GitHub | Source control |
+| Observability | dbt-expectations | Advanced data quality tests |
+| CI/CD | GitHub Actions | Runs 42 tests on every push |
 
 ---
 
@@ -137,16 +157,16 @@ streamlit run dashboard/app.py
 
 ## 📈 dbt Lineage Graph
 
-<img width="1495" height="768" alt="lineage_graph" src="https://github.com/user-attachments/assets/6a92d681-1109-46b6-8276-82344dcbfb15" />
+![dbt Lineage Graph](lineage_graph.png)
 
 ---
 
 ## 🧪 Data Quality
 
-- **31 automated dbt tests** running on every build
-- Tests include: `not_null`, `unique`, `accepted_values`
+- **42 automated dbt tests** running on every build
+- Tests include: `not_null`, `unique`, `accepted_values`, `expect_table_row_count_to_be_between`, `expect_column_values_to_be_between`, `expect_table_columns_to_match_ordered_list`
 - CI/CD via GitHub Actions runs `dbt build` on every push to `main`
-- Defense in depth: database constraints + dbt tests at two separate layers
+- Defense in depth: database constraints + dbt tests + dbt-expectations at three separate layers
 
 ---
 
@@ -166,11 +186,9 @@ streamlit run dashboard/app.py
 ## 🔮 Future Improvements (V2)
 
 - [ ] Migrate to Snowflake for cloud-scale processing (full 6M+ Yelp dataset)
+- [ ] Deploy Streamlit dashboard to Streamlit Cloud (live demo URL)
 - [ ] Add Prefect orchestration for scheduled pipeline runs
-- [ ] Expand Product Hunt data via API pagination
 - [ ] Add A/B test analysis layer
-- [ ] Deploy Streamlit dashboard to Streamlit Cloud
+- [ ] SHAP values for XGBoost model interpretability
 
 ---
-
-*Built as a portfolio project to demonstrate end-to-end analytics engineering skills.*
