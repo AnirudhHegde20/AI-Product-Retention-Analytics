@@ -108,7 +108,13 @@ jobs:
             );
           "
 
-      # 7. Run dbt build (compile + test all models)
+      # 7. Install dbt packages
+      - name: Install dbt packages
+        working-directory: ai_saas_dbt
+        run: |
+          dbt deps --profiles-dir ~/.dbt
+
+      # 8. Run dbt build (compile + test all models)
       - name: Run dbt build
         working-directory: ai_saas_dbt
         run: |
