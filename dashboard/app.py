@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from lifelines import KaplanMeierFitter
+import os
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -16,10 +17,12 @@ st.set_page_config(
 @st.cache_resource
 def get_connection():
     return psycopg2.connect(
-        dbname="ai_saas_analytics",
-        user="anirudhhegde",
-        host="localhost",
-        port=5432
+        host=os.environ.get("SUPABASE_HOST"),
+        dbname=os.environ.get("SUPABASE_DB", "postgres"),
+        user=os.environ.get("SUPABASE_USER"),
+        password=os.environ.get("SUPABASE_PASSWORD"),
+        port=os.environ.get("SUPABASE_PORT", 6543),
+        sslmode="require"
     )
 
 @st.cache_data
@@ -276,4 +279,3 @@ elif page == "🔍 Competitive Intelligence":
         launch_df[['name', 'upvotes', 'category', 'traction_tier', 'success_score']].head(10),
         use_container_width=True
     )
-    
