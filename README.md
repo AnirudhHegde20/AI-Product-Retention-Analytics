@@ -149,6 +149,9 @@ streamlit run dashboard/app.py
 
 ---
 
+## 🚀 Live Dashboard
+[View the live dashboard →](https://anirudhhegde20-ai-product-retention-analyti-dashboardapp-kunnhj.streamlit.app)
+
 ## 💡 What I Learned
 
 - Warehouse layering (raw → staging → marts) and why immutability of raw data matters
