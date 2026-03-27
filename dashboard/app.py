@@ -4,7 +4,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from lifelines import KaplanMeierFitter
-import os
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -17,11 +16,11 @@ st.set_page_config(
 @st.cache_resource
 def get_connection():
     return psycopg2.connect(
-        host=os.environ.get("SUPABASE_HOST"),
-        dbname=os.environ.get("SUPABASE_DB", "postgres"),
-        user=os.environ.get("SUPABASE_USER"),
-        password=os.environ.get("SUPABASE_PASSWORD"),
-        port=os.environ.get("SUPABASE_PORT", 6543),
+        host=st.secrets["SUPABASE_HOST"],
+        dbname=st.secrets["SUPABASE_DB"],
+        user=st.secrets["SUPABASE_USER"],
+        password=st.secrets["SUPABASE_PASSWORD"],
+        port=int(st.secrets["SUPABASE_PORT"]),
         sslmode="require"
     )
 
